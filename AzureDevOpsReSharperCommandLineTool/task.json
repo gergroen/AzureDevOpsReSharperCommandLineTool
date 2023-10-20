@@ -37,12 +37,8 @@
     }
   ],
   "execution": {
-    "Node": {
-      "target": "sample.js",
-      "argumentFormat": ""
-    },
     "PowerShell3": {
-      "target": "sample.ps1"
+      "target": "ReSharperCommandLineTool.ps1"
     }
   }
 }
