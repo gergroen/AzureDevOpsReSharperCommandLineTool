@@ -1,0 +1,48 @@
+{
+  "id": "e44180f0-6f7c-11ee-87d0-d7c5c189aaa2",
+  "name": "AzureDevOpsReSharperCommandLineTool",
+  "friendlyName": "AzureDevOpsReSharperCommandLineTool",
+  "description": "Azure DevOps Pipelines Extension for using the ReSharper command line tools",
+  "author": "gergroen",
+  "helpMarkDown": "Replace with markdown to show in help",
+  "category": "Utility",
+  "visibility": [
+    "Build",
+    "Release"
+  ],
+  "demands": [],
+  "version": {
+    "Major": "0",
+    "Minor": "1",
+    "Patch": "0"
+  },
+  "minimumAgentVersion": "1.95.0",
+  "instanceNameFormat": "AzureDevOpsReSharperCommandLineTool $(message)",
+  "inputs": [
+    {
+      "name": "cwd",
+      "type": "filePath",
+      "label": "Working Directory",
+      "defaultValue": "",
+      "required": false,
+      "helpMarkDown": "Current working directory when AzureDevOpsReSharperCommandLineTool is run."
+    },
+    {
+      "name": "msg",
+      "type": "string",
+      "label": "Message",
+      "defaultValue": "Hello World",
+      "required": true,
+      "helpMarkDown": "Message to echo out"
+    }
+  ],
+  "execution": {
+    "Node": {
+      "target": "sample.js",
+      "argumentFormat": ""
+    },
+    "PowerShell3": {
+      "target": "sample.ps1"
+    }
+  }
+}
