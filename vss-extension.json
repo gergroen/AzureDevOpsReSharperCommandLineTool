@@ -1,0 +1,36 @@
+{
+    "manifestVersion": 1,
+    "id": "AzureDevOpsReSharperCommandLineTool",
+    "name": "ReSharper Command Line Tool",
+    "version": "0.1.0",
+    "publisher": "4bes",
+    "targets": [
+        {
+            "id": "Microsoft.VisualStudio.Services"
+        }
+    ],    
+    "description": "Azure DevOps Pipelines Extension for using the ReSharper command line tools",
+    "categories": [
+        "Azure Pipelines"
+    ],
+    "icons": {
+        "default": "AzureDevOpsReSharperCommandLineTool/icon.png"        
+    },
+    "files": [
+        {
+            "path": "AzureDevOpsReSharperCommandLineTool"
+        }
+    ],
+    "contributions": [
+        {
+            "id": "AzureDevOpsReSharperCommandLineTool",
+            "type": "ms.vss-distributed-task.task",
+            "targets": [
+                "ms.vss-distributed-task.tasks"
+            ],
+            "properties": {
+                "name": "AzureDevOpsReSharperCommandLineTool"
+            }
+        }
+    ]
+}
