@@ -3,7 +3,7 @@
     "id": "AzureDevOpsReSharperCommandLineTool",
     "name": "ReSharper Command Line Tool",
     "version": "0.1.0",
-    "publisher": "4bes",
+    "publisher": "GerardGroenewegen",
     "targets": [
         {
             "id": "Microsoft.VisualStudio.Services"
