@@ -20,20 +20,12 @@
   "instanceNameFormat": "AzureDevOpsReSharperCommandLineTool $(message)",
   "inputs": [
     {
-      "name": "cwd",
-      "type": "filePath",
-      "label": "Working Directory",
-      "defaultValue": "",
-      "required": false,
-      "helpMarkDown": "Current working directory when AzureDevOpsReSharperCommandLineTool is run."
-    },
-    {
-      "name": "msg",
-      "type": "string",
-      "label": "Message",
-      "defaultValue": "Hello World",
+      "name": "Target",
+      "type": "String",
+      "label": "Target variable",
+      "defaultValue": "TargetSolution.sln",
       "required": true,
-      "helpMarkDown": "Message to echo out"
+      "helpMarkDown": "The target of the action"
     }
   ],
   "execution": {
