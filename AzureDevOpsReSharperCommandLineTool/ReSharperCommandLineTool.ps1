@@ -21,7 +21,7 @@ $failBuildLevelSelectorValue = $severityLevels[$failBuildLevelSelector]
 
 $xmlContent = [xml] (Get-Content "$inspectCodeResultsPath")
 $issuesTypesXpath = "/Report/IssueTypes//IssueType"
-$issuesTypesElements = $xmlContent | Select-Xml $issuesTypesXpath | Select -Expand Node
+$issuesTypesElements = $xmlContent | Select-Xml $issuesTypesXpath | Select-Object -Expand Node
 $issuesTypesElementsPSObject = @{}
 foreach($issuesTypesElement in $issuesTypesElements) {
     $issuesTypesElementsPSObject.Add($issuesTypesElement.Attributes["Id"].Value, $issuesTypesElement.Attributes["Severity"].Value)
