@@ -1,8 +1,8 @@
 {
     "manifestVersion": 1,
-    "id": "AzureDevOpsReSharperCommandLineTool",
-    "name": "ReSharper Command Line Tool",
-    "version": "0.1.1",
+    "id": "AzureDevOpsReSharperCommandLineTools",
+    "name": "ReSharper Command Line Tools",
+    "version": "0.1.2",
     "publisher": "GerardGroenewegen",
     "targets": [
         {
@@ -14,22 +14,22 @@
         "Azure Pipelines"
     ],
     "icons": {
-        "default": "icon.png"        
+        "default": "AzureDevOpsReSharperCommandLineTools/icon.png"        
     },
     "files": [
         {
-            "path": "AzureDevOpsReSharperCommandLineTool"
+            "path": "AzureDevOpsReSharperCommandLineTools"
         }
     ],
     "contributions": [
         {
-            "id": "AzureDevOpsReSharperCommandLineTool",
+            "id": "AzureDevOpsReSharperCommandLineTools",
             "type": "ms.vss-distributed-task.task",
             "targets": [
                 "ms.vss-distributed-task.tasks"
             ],
             "properties": {
-                "name": "AzureDevOpsReSharperCommandLineTool"
+                "name": "AzureDevOpsReSharperCommandLineTools"
             }
         }
     ]

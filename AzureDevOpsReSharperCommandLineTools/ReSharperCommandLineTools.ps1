@@ -3,13 +3,14 @@ $inspectCodeToolFolder = "resharper_commandline_tools"
 $inspectCodeResultsPath  = "$($inspectCodeToolFolder)\report.xml"
 $inspectCodeResultsHtmlPath  = "$($inspectCodeToolFolder)\report.html"
 $summaryFilePath  = "$($inspectCodeToolFolder)\Summary.md"
+$inspectCodeCacheFolder = "$($inspectCodeToolFolder)\cache";
 
 Write-Output "Install ReSharper CommandLine Tools"
 mkdir -p $inspectCodeToolFolder
 & nuget install JetBrains.ReSharper.CommandLineTools -OutputDirectory $inspectCodeToolFolder
 
 Write-Output "Run Inspect Code"
-& ".\$inspectCodeToolFolder\JetBrains.ReSharper.CommandLineTools*\tools\inspectcode.exe" $inspectCodeTarget "--output=$($inspectCodeToolFolder)\" "--format=Html;Xml" "/disable-settings-layers:SolutionPersonal" "--build" "--properties:Configuration=Release"
+& ".\$inspectCodeToolFolder\JetBrains.ReSharper.CommandLineTools*\tools\inspectcode.exe" $inspectCodeTarget "--output=$($inspectCodeToolFolder)\" "--format=Html;Xml" "/disable-settings-layers:SolutionPersonal" "--build" "--properties:Configuration=Release" "--caches-home=$($inspectCodeCacheFolder)"
 
 Write-Output "Analyse Results"
 $severityLevels = @{"HINT" = 0; "SUGGESTION" = 1; "WARNING" = 2; "ERROR" = 3}
@@ -55,7 +56,7 @@ $filteredElementsReportError = 0
 foreach($issue in $issuesElementsPSObject) {
     if($issue.SeverityLevel -ge $failBuildLevelSelectorValue) {
         $item = New-Object -TypeName PSObject -Property @{
-            'Severity' = $severity
+            'Severity' = $issue.Severity
             'Message' = $issue.Message
             'File' = $issue.File
             'Line' = $issue.Line
