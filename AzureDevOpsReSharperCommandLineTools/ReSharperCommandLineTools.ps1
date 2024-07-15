@@ -1,16 +1,16 @@
 [string]$inspectCodeTarget  = Get-VstsInput -Name Target
-$inspectCodeToolFolder = "resharper_commandline_tools"
+$inspectCodeToolFolder = $([IO.Path]::GetFullPath("resharper_commandline_tools"))
 $inspectCodeResultsPath  = "$($inspectCodeToolFolder)\report.sarif"
 $inspectCodeResultsHtmlPath  = "$($inspectCodeToolFolder)\report.html"
 $inspectCodeResultsTxtPath = "$($inspectCodeToolFolder)\report.txt"
 $summaryFilePath  = "$($inspectCodeToolFolder)\Summary.md"
-$inspectCodeCacheFolder = "$($inspectCodeToolFolder)\cache";
+$inspectCodeCacheFolder = "$($inspectCodeToolFolder)\cache"
 
 Write-Output "##[section]DotNet Install Tool JetBrains.ReSharper.GlobalTools"
 dotnet tool update -g JetBrains.ReSharper.GlobalTools
 
 Write-Output "##[section]Run Inspect Code"
-mkdir -p $inspectCodeToolFolder
+New-Item -Path $inspectCodeToolFolder -ItemType Directory | Out-Null
 #"--include=**.cs"
 & jb inspectcode $inspectCodeTarget "--output=$($inspectCodeToolFolder)" "--format=Html;Text;Sarif" "/disable-settings-layers:SolutionPersonal" "--no-build" "--no-swea" "--properties:Configuration=Release" "--caches-home=$($inspectCodeCacheFolder)"
 
@@ -24,6 +24,7 @@ $filteredElementsFail = [System.Collections.ArrayList]::new()
 foreach ($run in $sarifObject.runs) {
     foreach ($result in $run.results) {
         if ($result.level -eq "note") {
+            $null = $filteredElementsFail.Add($result);
             $filteredElementsReportSuggestion++
         }
         if ($result.level -eq "warning") {
@@ -33,6 +34,7 @@ foreach ($run in $sarifObject.runs) {
         if ($result.level -eq "error") {
             $null = $filteredElementsFail.Add($result);
             $filteredElementsReportError++
+
         }
     }
 }
@@ -44,7 +46,7 @@ foreach ($issue in $filteredElementsFail | Sort-Object level -Descending) {
         $issueLocationFile = $issueLocation.physicalLocation.artifactLocation.uri;
         $issueLocationLine = $issueLocation.physicalLocation.region.startLine;
         $issueLocationColumn = $issueLocation.physicalLocation.region.startColumn;
-        Write-Output ("##vso[task.logissue type={0};sourcepath={1};linenumber={2};columnnumber={3}]R# {4}" -f $errorType, $issueLocationFile, $issueLocationLine, $issueLocationColumn, $issue.message.text)
+        Write-Output ("##vso[task.logissue type={0};sourcepath={1};linenumber={2};columnnumber={3};]R# {4}" -f $errorType, $issueLocationFile, $issueLocationLine, $issueLocationColumn, $issue.message.text)
     }
 }
 
@@ -53,11 +55,11 @@ $summaryMessage = "Code inspect found $($filteredElementsReportSuggestion) sugge
 Write-Output $summaryMessage
 Add-Content $summaryFilePath ($summaryMessage) 
 
-Write-Output "##vso[artifact.upload containerfolder=inspect_code;artifactname=inspect_code]$([IO.Path]::GetFullPath($summaryFilePath))"
-Write-Output "##vso[artifact.upload containerfolder=inspect_code;artifactname=inspect_code]$([IO.Path]::GetFullPath($inspectCodeResultsPath))"
-Write-Output "##vso[artifact.upload containerfolder=inspect_code;artifactname=inspect_code]$([IO.Path]::GetFullPath($inspectCodeResultsTxtPath))"
-Write-Output "##vso[artifact.upload containerfolder=inspect_code;artifactname=inspect_code]$([IO.Path]::GetFullPath($inspectCodeResultsHtmlPath))"
-Write-Output "##vso[task.addattachment type=Distributedtask.Core.Summary;name=Resharper Command Line Tools Inspect Code;]$([IO.Path]::GetFullPath($summaryFilePath))"
+Write-Output "##vso[artifact.upload containerfolder=inspect_code;artifactname=inspect_code]$summaryFilePath"
+Write-Output "##vso[artifact.upload containerfolder=inspect_code;artifactname=inspect_code]$inspectCodeResultsPath"
+Write-Output "##vso[artifact.upload containerfolder=inspect_code;artifactname=inspect_code]$inspectCodeResultsTxtPath"
+Write-Output "##vso[artifact.upload containerfolder=inspect_code;artifactname=inspect_code]$inspectCodeResultsHtmlPath"
+Write-Output "##vso[task.addattachment type=Distributedtask.Core.Summary;name=Resharper Command Line Tools Inspect Code;]$summaryFilePath"
 
 Remove-Item $inspectCodeToolFolder -Recurse -Force
 $buildResult = "Succeeded"
