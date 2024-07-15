@@ -1,95 +1,61 @@
 [string]$inspectCodeTarget  = Get-VstsInput -Name Target
 $inspectCodeToolFolder = "resharper_commandline_tools"
-$inspectCodeResultsPath  = "$($inspectCodeToolFolder)\report.xml"
+$inspectCodeResultsPath  = "$($inspectCodeToolFolder)\report.sarif"
 $inspectCodeResultsHtmlPath  = "$($inspectCodeToolFolder)\report.html"
+$inspectCodeResultsTxtPath = "$($inspectCodeToolFolder)\report.txt"
 $summaryFilePath  = "$($inspectCodeToolFolder)\Summary.md"
 $inspectCodeCacheFolder = "$($inspectCodeToolFolder)\cache";
 
-Write-Output "Install ReSharper CommandLine Tools"
+Write-Output "##[section]DotNet Install Tool JetBrains.ReSharper.GlobalTools"
+dotnet tool update -g JetBrains.ReSharper.GlobalTools
+
+Write-Output "##[section]Run Inspect Code"
 mkdir -p $inspectCodeToolFolder
-& nuget install JetBrains.ReSharper.CommandLineTools -OutputDirectory $inspectCodeToolFolder
+#"--include=**.cs"
+& jb inspectcode $inspectCodeTarget "--output=$($inspectCodeToolFolder)" "--format=Html;Text;Sarif" "/disable-settings-layers:SolutionPersonal" "--no-build" "--no-swea" "--properties:Configuration=Release" "--caches-home=$($inspectCodeCacheFolder)"
 
-Write-Output "Run Inspect Code"
-& ".\$inspectCodeToolFolder\JetBrains.ReSharper.CommandLineTools*\tools\inspectcode.exe" $inspectCodeTarget "--output=$($inspectCodeToolFolder)\" "--format=Html;Xml" "/disable-settings-layers:SolutionPersonal" "--build" "--properties:Configuration=Release" "--caches-home=$($inspectCodeCacheFolder)"
-
-Write-Output "Analyse Results"
-$severityLevels = @{"HINT" = 0; "SUGGESTION" = 1; "WARNING" = 2; "ERROR" = 3}
-$severityLevelSuggestion = $severityLevels["SUGGESTION"]
-$severityLevelWarning = $severityLevels["WARNING"]
-$severityLevelError = $severityLevels["ERROR"]
-$failBuildLevelSelector = "ERROR"
-$failBuildLevelSelectorValue = $severityLevels[$failBuildLevelSelector]
-
-$xmlContent = [xml] (Get-Content "$inspectCodeResultsPath")
-$issuesTypesXpath = "/Report/IssueTypes//IssueType"
-$issuesTypesElements = $xmlContent | Select-Xml $issuesTypesXpath | Select-Object -Expand Node
-$issuesTypesElementsPSObject = @{}
-foreach($issuesTypesElement in $issuesTypesElements) {
-    $issuesTypesElementsPSObject.Add($issuesTypesElement.Attributes["Id"].Value, $issuesTypesElement.Attributes["Severity"].Value)
-}
-
-$issuesXpath = "/Report/Issues//Issue"
-$issuesElements = $xmlContent | Select-Xml $issuesXpath | Select-Object -Expand Node
-$issuesElementsPSObject = [System.Collections.ArrayList]::new()
-foreach($issuesElement in $issuesElements) {
-    $typeId = $issuesElement.Attributes["TypeId"].Value
-    $severity = $issuesTypesElementsPSObject[$typeId]
-    if($severity -eq "INVALID_SEVERITY") {
-        $severity = $issuesElement.Attributes["Severity"].Value
-    }
-    $severityLevel = $severityLevels[$severity]
-    $item = [PSCustomObject] @{
-        TypeId = $typeId
-        Severity = $severity
-        SeverityLevel = $severityLevel
-        Message = $issuesElement.Attributes["Message"].Value
-        File = $issuesElement.Attributes["File"].Value
-        Line = $issuesElement.Attributes["Line"].Value
-        }
-    $null = $issuesElementsPSObject.Add($item)
-}
-
-$filteredElementsFail = [System.Collections.ArrayList]::new()
+Write-Output "##[section]Analyse Results"
+$sarifContent = Get-Content -Path $inspectCodeResultsPath -Raw
+$sarifObject = $sarifContent | ConvertFrom-Json
 $filteredElementsReportSuggestion = 0
 $filteredElementsReportWarning = 0
 $filteredElementsReportError = 0
-foreach($issue in $issuesElementsPSObject) {
-    if($issue.SeverityLevel -ge $failBuildLevelSelectorValue) {
-        $item = New-Object -TypeName PSObject -Property @{
-            'Severity' = $issue.Severity
-            'Message' = $issue.Message
-            'File' = $issue.File
-            'Line' = $issue.Line
+$filteredElementsFail = [System.Collections.ArrayList]::new()
+foreach ($run in $sarifObject.runs) {
+    foreach ($result in $run.results) {
+        if ($result.level -eq "note") {
+            $filteredElementsReportSuggestion++
         }
-        $null = $filteredElementsFail.Add($item)
-    }
-    if($issue.SeverityLevel -eq $severityLevelSuggestion) {
-        $filteredElementsReportSuggestion++
-    }
-    if($issue.SeverityLevel -eq $severityLevelWarning) {
-        $filteredElementsReportWarning++
-    }
-    if($issue.SeverityLevel -eq $severityLevelError) {
-        $filteredElementsReportError++
+        if ($result.level -eq "warning") {
+            $null = $filteredElementsFail.Add($result);
+            $filteredElementsReportWarning++
+        }
+        if ($result.level -eq "error") {
+            $null = $filteredElementsFail.Add($result);
+            $filteredElementsReportError++
+        }
     }
 }
 
-Write-Output "Report Results Output"
-foreach ($issue in $filteredElementsFail | Sort-Object Severity -Descending) {
-    $errorType = "warning"
-    if($issue.Severity -eq "ERROR"){
-        $errorType = "error"
+Write-Output "##[section]Report Results Output"
+foreach ($issue in $filteredElementsFail | Sort-Object level -Descending) {
+    foreach ($issueLocation in $issue.locations)
+    {
+        $issueLocationFile = $issueLocation.physicalLocation.artifactLocation.uri;
+        $issueLocationLine = $issueLocation.physicalLocation.region.startLine;
+        $issueLocationColumn = $issueLocation.physicalLocation.region.startColumn;
+        Write-Output ("##vso[task.logissue type={0};sourcepath={1};linenumber={2};columnnumber={3}]R# {4}" -f $errorType, $issueLocationFile, $issueLocationLine, $issueLocationColumn, $issue.message.text)
     }
-    Write-Output ("##vso[task.logissue type={0};sourcepath={1};linenumber={2};columnnumber=1]R# {3}" -f $errorType, $issue.File, $issue.Line, $issue.Message)
 }
 
 $null = New-Item $summaryFilePath -type file -force
 $summaryMessage = "Code inspect found $($filteredElementsReportSuggestion) suggestions, $($filteredElementsReportWarning) warnings and $($filteredElementsReportError) errors"
 Write-Output $summaryMessage
-Add-Content $summaryFilePath ($summaryMessage)
+Add-Content $summaryFilePath ($summaryMessage) 
 
 Write-Output "##vso[artifact.upload containerfolder=inspect_code;artifactname=inspect_code]$([IO.Path]::GetFullPath($summaryFilePath))"
 Write-Output "##vso[artifact.upload containerfolder=inspect_code;artifactname=inspect_code]$([IO.Path]::GetFullPath($inspectCodeResultsPath))"
+Write-Output "##vso[artifact.upload containerfolder=inspect_code;artifactname=inspect_code]$([IO.Path]::GetFullPath($inspectCodeResultsTxtPath))"
 Write-Output "##vso[artifact.upload containerfolder=inspect_code;artifactname=inspect_code]$([IO.Path]::GetFullPath($inspectCodeResultsHtmlPath))"
 Write-Output "##vso[task.addattachment type=Distributedtask.Core.Summary;name=Resharper Command Line Tools Inspect Code;]$([IO.Path]::GetFullPath($summaryFilePath))"
 
