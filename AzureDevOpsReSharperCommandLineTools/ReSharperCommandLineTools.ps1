@@ -8,11 +8,10 @@ Write-Output "##[section]DotNet Install Tool JetBrains.ReSharper.GlobalTools"
 dotnet tool update -g JetBrains.ReSharper.GlobalTools
 
 # Azure DevOps REST API endpoint for pull request changes
-$baseUrl = "=$(System.CollectionUri)/$(System.TeamProject)/_apis/git/repositories/$(Build.Repository.ID)"
-$uri = "$($baseUrl)/pullRequests/$(System.PullRequest.PullRequestId)/iterations/1/changes?api-version=6.0"
-
+$baseUrl = "$($env:System_CollectionUri)$($env:System_TeamProject)/_apis/git/repositories/$($env:Build_Repository_ID)"
+$uri = "$($baseUrl)/pullRequests/$($env:System_PullRequest_PullRequestId)/iterations/1/changes?api-version=6.0"
 # Base64-encoded PAT
-$base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$(System.AccessToken)"))
+$base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$($env:System_AccessToken)"))
 # Invoke the REST API
 Write-Output "Invoke the REST API $($uri)"
 $response = Invoke-RestMethod -Uri $uri -Method Get -Headers @{
