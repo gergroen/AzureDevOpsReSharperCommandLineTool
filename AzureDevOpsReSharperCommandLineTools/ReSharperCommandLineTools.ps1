@@ -18,15 +18,18 @@ $response = Invoke-RestMethod -Uri $uri -Method Get -Headers @{
     Authorization = ("Basic {0}" -f $base64AuthInfo)
 }
 # Output the changed files
-$response.changes | ForEach-Object {
+
+$include = "--include="
+$response.changeEntries | ForEach-Object {
     Write-Output $_.item.path
+    $include ="$($include)$($_.item.path.TrimStart("/"));"
 }
 
 Write-Output "##[section]Run Inspect Code"
 New-Item -Path $inspectCodeToolFolder -ItemType Directory | Out-Null
 
 #"--include=**.cs"
-& jb inspectcode $inspectCodeTarget "--output=$($inspectCodeResultsPath)" "--format=Sarif" "/disable-settings-layers:SolutionPersonal" "--no-build" "--no-swea" "--properties:Configuration=Release" "--caches-home=$($inspectCodeCacheFolder)"
+& jb inspectcode $inspectCodeTarget "--output=$($inspectCodeResultsPath)" "--format=Sarif" "/disable-settings-layers:SolutionPersonal" "--no-build" "--no-swea" "--properties:Configuration=Release" "--caches-home=$($inspectCodeCacheFolder)" "$($include)"
 
 Write-Output "##[section]Analyse Results"
 $sarifContent = Get-Content -Path $inspectCodeResultsPath -Raw
