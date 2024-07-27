@@ -13,16 +13,18 @@ $uri = "$($baseUrl)/pullRequests/$($env:System_PullRequest_PullRequestId)/iterat
 # Base64-encoded PAT
 $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$($env:System_AccessToken)"))
 # Invoke the REST API
-Write-Output "Invoke the REST API $($uri)"
+Write-Output "##[section]Invoke the REST API $($uri)"
 $response = Invoke-RestMethod -Uri $uri -Method Get -Headers @{
     Authorization = ("Basic {0}" -f $base64AuthInfo)
 }
-# Output the changed files
+Write-Output "##[section]Response$($response | ConvertTo-Json)"
 
+# Output the changed files
 $include = "--include="
 $response.changeEntries | ForEach-Object {
-    Write-Output $_.item.path
-    $include ="$($include)$($_.item.path.TrimStart("/"));"
+    $changedFile = $_.item.path.TrimStart("/");
+    Write-Output "##[section]$changedFile"
+    $include ="$($include)$($changedFile);"
 }
 
 Write-Output "##[section]Run Inspect Code"
