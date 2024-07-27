@@ -7,8 +7,25 @@ $inspectCodeCacheFolder = "$($inspectCodeToolFolder)\cache"
 Write-Output "##[section]DotNet Install Tool JetBrains.ReSharper.GlobalTools"
 dotnet tool update -g JetBrains.ReSharper.GlobalTools
 
+# Azure DevOps REST API endpoint for pull request changes
+$baseUrl = "=$(System.CollectionUri)/$(System.TeamProject)/_apis/git/repositories/$(Build.Repository.ID)"
+$uri = "$($baseUrl)/pullRequests/$(System.PullRequest.PullRequestId)/iterations/1/changes?api-version=6.0"
+
+# Base64-encoded PAT
+$base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$(System.AccessToken)"))
+# Invoke the REST API
+Write-Output "Invoke the REST API $($uri)"
+$response = Invoke-RestMethod -Uri $uri -Method Get -Headers @{
+    Authorization = ("Basic {0}" -f $base64AuthInfo)
+}
+# Output the changed files
+$response.changes | ForEach-Object {
+    Write-Output $_.item.path
+}
+
 Write-Output "##[section]Run Inspect Code"
 New-Item -Path $inspectCodeToolFolder -ItemType Directory | Out-Null
+
 #"--include=**.cs"
 & jb inspectcode $inspectCodeTarget "--output=$($inspectCodeResultsPath)" "--format=Sarif" "/disable-settings-layers:SolutionPersonal" "--no-build" "--no-swea" "--properties:Configuration=Release" "--caches-home=$($inspectCodeCacheFolder)"
 
