@@ -1,4 +1,5 @@
 [string]$inspectCodeTarget  = Get-VstsInput -Name Target
+[string]$onlyChangedFilesIfPullRequest  = Get-VstsInput -Name OnlyInspectChangedFilesIfPullRequest
 $inspectCodeToolFolder = $([IO.Path]::GetFullPath("$($env:AGENT_TEMPDIRECTORY)\resharper_commandline_tools"))
 $inspectCodeResultsPath  = "$($inspectCodeToolFolder)\resharper_commandline_tools_inspectcode.sarif"
 $summaryFilePath  = "$($inspectCodeToolFolder)\Summary.md"
@@ -7,24 +8,25 @@ $inspectCodeCacheFolder = "$($inspectCodeToolFolder)\cache"
 Write-Output "##[section]DotNet Install Tool JetBrains.ReSharper.GlobalTools"
 dotnet tool update -g JetBrains.ReSharper.GlobalTools
 
-# Azure DevOps REST API endpoint for pull request changes
-$baseUrl = "$($env:System_CollectionUri)$($env:System_TeamProject)/_apis/git/repositories/$($env:Build_Repository_ID)"
-$uri = "$($baseUrl)/pullRequests/$($env:System_PullRequest_PullRequestId)/iterations/1/changes?api-version=6.0"
-# Base64-encoded PAT
-$base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$($env:System_AccessToken)"))
-# Invoke the REST API
-Write-Output "##[section]Invoke the REST API $($uri)"
-$response = Invoke-RestMethod -Uri $uri -Method Get -Headers @{
-    Authorization = ("Basic {0}" -f $base64AuthInfo)
-}
-Write-Output "##[section]Response$($response | ConvertTo-Json)"
+$include = "";
+if($onlyChangedFilesIfPullRequest -and $env:System_PullRequest_PullRequestId) {
+    # Azure DevOps REST API endpoint for pull request changes
+    $baseUrl = "$($env:System_CollectionUri)$($env:System_TeamProject)/_apis/git/repositories/$($env:Build_Repository_ID)"
+    $uri = "$($baseUrl)/pullRequests/$($env:System_PullRequest_PullRequestId)/iterations/1/changes?api-version=6.0"
+    # Base64-encoded PAT
+    $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$($env:System_AccessToken)"))
+    # Invoke the REST API
+    Write-Output "##[section]Invoke the REST API $($uri)"
+    $response = Invoke-RestMethod -Uri $uri -Method Get -Headers @{
+        Authorization = ("Basic {0}" -f $base64AuthInfo)
+    }
 
-# Output the changed files
-$include = "--include="
-$response.changeEntries | ForEach-Object {
-    $changedFile = $_.item.path.TrimStart("/");
-    Write-Output "##[section]$changedFile"
-    $include ="$($include)$($changedFile);"
+    # Output the changed files
+    $include = "--include="
+    $response.changeEntries | ForEach-Object {
+        $changedFile = $_.item.path.TrimStart("/");
+        $include ="$($include)$($changedFile);"
+    }
 }
 
 Write-Output "##[section]Run Inspect Code"

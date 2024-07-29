@@ -14,7 +14,7 @@
   "version": {
     "Major": "0",
     "Minor": "1",
-    "Patch": "12"
+    "Patch": "13"
   },
   "minimumAgentVersion": "1.95.0",
   "instanceNameFormat": "ReSharperCommandLineTools $(message)",
@@ -26,6 +26,14 @@
       "defaultValue": "TargetSolution.sln",
       "required": true,
       "helpMarkDown": "The target of the action"
+    },
+    {
+      "name": "OnlyInspectChangedFilesIfPullRequest",
+      "type": "Boolean",
+      "label": "Only inspect changed files if pull request",
+      "defaultValue": false,
+      "required": true,
+      "helpMarkDown": "Only inspect changed files if pull request"
     }
   ],
   "execution": {
