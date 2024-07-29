@@ -2,7 +2,7 @@
     "manifestVersion": 1,
     "id": "AzureDevOpsReSharperCommandLineTools",
     "name": "ReSharper Command Line Tools",
-    "version": "0.1.17",
+    "version": "0.1.18",
     "publisher": "GerardGroenewegen",
     "targets": [
         {
