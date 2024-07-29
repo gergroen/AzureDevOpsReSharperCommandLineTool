@@ -5,10 +5,15 @@ $inspectCodeResultsPath  = "$($inspectCodeToolFolder)\resharper_commandline_tool
 $summaryFilePath  = "$($inspectCodeToolFolder)\Summary.md"
 $cacheFolder = "$($inspectCodeToolFolder)\cache"
 $inspectCodeCacheFolder = "$($cacheFolder)\inspect"
-$dotnetToolsMManifestFile = "$($cacheFolder )\dotnet-tools\dotnet-tools.json"
+$dotnetToolsMManifestFolder = "$($cacheFolder)\dotnet-tools\dotnet-tools.json"
+$dotnetToolsMManifestFile = "$($dotnetToolsMManifestFolder)\.config\dotnet-tools.json"
 
 Write-Output "##[section]DotNet Install Tool JetBrains.ReSharper.GlobalTools"
-dotnet tool install JetBrains.ReSharper.GlobalTools --create-manifest-if-needed --tool-manifest $dotnetToolsMManifestFile
+if(!(Test-Path $dotnetToolsMManifestFile))
+{
+    dotnet new tool-manifest -o $dotnetToolsMManifestFolder
+}
+dotnet tool update JetBrains.ReSharper.GlobalTools --tool-manifest $dotnetToolsMManifestFile
 
 $include = "";
 if($onlyChangedFilesIfPullRequest -and $env:System_PullRequest_PullRequestId) {
