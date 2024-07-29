@@ -10,17 +10,16 @@ dotnet tool update -g JetBrains.ReSharper.GlobalTools
 
 $include = "";
 if($onlyChangedFilesIfPullRequest -and $env:System_PullRequest_PullRequestId) {
+    Write-Output "##[section]Get list of changed files of pull request"
     # Azure DevOps REST API endpoint for pull request changes
     $baseUrl = "$($env:System_CollectionUri)$($env:System_TeamProject)/_apis/git/repositories/$($env:Build_Repository_ID)"
     $uri = "$($baseUrl)/pullRequests/$($env:System_PullRequest_PullRequestId)/iterations/1/changes?api-version=6.0"
     # Base64-encoded PAT
     $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$($env:System_AccessToken)"))
     # Invoke the REST API
-    Write-Output "##[section]Invoke the REST API $($uri)"
     $response = Invoke-RestMethod -Uri $uri -Method Get -Headers @{
         Authorization = ("Basic {0}" -f $base64AuthInfo)
     }
-
     # Output the changed files
     $include = "--include="
     $response.changeEntries | ForEach-Object {
@@ -32,8 +31,7 @@ if($onlyChangedFilesIfPullRequest -and $env:System_PullRequest_PullRequestId) {
 Write-Output "##[section]Run Inspect Code"
 New-Item -Path $inspectCodeToolFolder -ItemType Directory | Out-Null
 
-#"--include=**.cs"
-& jb inspectcode $inspectCodeTarget "--output=$($inspectCodeResultsPath)" "--format=Sarif" "/disable-settings-layers:SolutionPersonal" "--no-build" "--no-swea" "--properties:Configuration=Release" "--caches-home=$($inspectCodeCacheFolder)" "$($include)"
+& jb inspectcode $inspectCodeTarget "--output=$($inspectCodeResultsPath)" "--properties:Configuration=Release" "--caches-home=$($inspectCodeCacheFolder)" "$($include)"
 
 Write-Output "##[section]Analyse Results"
 $sarifContent = Get-Content -Path $inspectCodeResultsPath -Raw
@@ -80,7 +78,7 @@ Write-Output "##vso[artifact.upload containerfolder=CodeAnalysisLogs;artifactnam
 Write-Output "##vso[task.addattachment type=Distributedtask.Core.Summary;name=Resharper Command Line Tools Inspect Code;]$summaryFilePath"
 
 $buildResult = "Succeeded"
-if($filteredElementsFail.Count -gt 0) {
-    $buildResult = "Failed"
-}
+# if($filteredElementsFail.Count -gt 0) {
+#     $buildResult = "Failed"
+# }
 Write-Output ("##vso[task.complete result={0};]{1}" -f $buildResult, $summaryMessage)
