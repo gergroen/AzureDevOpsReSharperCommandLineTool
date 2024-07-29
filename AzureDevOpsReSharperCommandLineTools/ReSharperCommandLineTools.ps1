@@ -5,15 +5,15 @@ $inspectCodeResultsPath  = "$($inspectCodeToolFolder)\resharper_commandline_tool
 $summaryFilePath  = "$($inspectCodeToolFolder)\Summary.md"
 $cacheFolder = "$($inspectCodeToolFolder)\cache"
 $inspectCodeCacheFolder = "$($cacheFolder)\inspect"
-$dotnetToolsMManifestFolder = "$($cacheFolder)\dotnet-tools\dotnet-tools.json"
-$dotnetToolsMManifestFile = "$($dotnetToolsMManifestFolder)\.config\dotnet-tools.json"
+$dotnetToolsManifestFolder = "$($cacheFolder)\dotnet-tools"
+$dotnetToolsManifestFile = "$($dotnetToolsMManifestFolder)\.config\dotnet-tools.json"
 
 Write-Output "##[section]DotNet Install Tool JetBrains.ReSharper.GlobalTools"
-if(!(Test-Path $dotnetToolsMManifestFile))
+if(!(Test-Path $dotnetToolsManifestFile))
 {
-    dotnet new tool-manifest -o $dotnetToolsMManifestFolder
+    dotnet new tool-manifest -o $dotnetToolsManifestFolder
 }
-dotnet tool update JetBrains.ReSharper.GlobalTools --tool-manifest $dotnetToolsMManifestFile
+dotnet tool update JetBrains.ReSharper.GlobalTools --tool-manifest $dotnetToolsManifestFile
 
 $include = "";
 if($onlyChangedFilesIfPullRequest -and $env:System_PullRequest_PullRequestId) {
@@ -40,7 +40,8 @@ if(!(Test-Path $inspectCodeToolFolder))
 {
     New-Item -Path $inspectCodeToolFolder -ItemType Directory | Out-Null
 }
-& dotnet tool run jb inspectcode $inspectCodeTarget "--output=$($inspectCodeResultsPath)" "--properties:Configuration=Release" "--caches-home=$($inspectCodeCacheFolder)" "$($include)"
+Start-Process -FilePath "dotnet" -WorkingDirectory $dotnetToolsManifestFolder -ArgumentList "tool run jb inspectcode",$inspectCodeTarget,"--output=$($inspectCodeResultsPath)","--properties:Configuration=Release","--caches-home=$($inspectCodeCacheFolder)",$include -Wait -NoNewWindow
+#& dotnet tool run jb inspectcode $inspectCodeTarget "--output=$($inspectCodeResultsPath)" "--properties:Configuration=Release" "--caches-home=$($inspectCodeCacheFolder)" "$($include)"
 
 Write-Output "##[section]Analyse Results"
 $sarifContent = Get-Content -Path $inspectCodeResultsPath -Raw
