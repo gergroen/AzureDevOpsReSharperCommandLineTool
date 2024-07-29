@@ -6,7 +6,7 @@ $summaryFilePath  = "$($inspectCodeToolFolder)\Summary.md"
 $cacheFolder = "$($inspectCodeToolFolder)\cache"
 $inspectCodeCacheFolder = "$($cacheFolder)\inspect"
 $dotnetToolsManifestFolder = "$($cacheFolder)\dotnet-tools"
-$dotnetToolsManifestFile = "$($dotnetToolsMManifestFolder)\.config\dotnet-tools.json"
+$dotnetToolsManifestFile = "$($dotnetToolsManifestFolder)\.config\dotnet-tools.json"
 
 Write-Output "##[section]DotNet Install Tool JetBrains.ReSharper.GlobalTools"
 if(!(Test-Path $dotnetToolsManifestFile))
