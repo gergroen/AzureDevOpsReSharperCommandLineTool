@@ -3,10 +3,12 @@
 $inspectCodeToolFolder = $([IO.Path]::GetFullPath("$($env:AGENT_TEMPDIRECTORY)\resharper_commandline_tools"))
 $inspectCodeResultsPath  = "$($inspectCodeToolFolder)\resharper_commandline_tools_inspectcode.sarif"
 $summaryFilePath  = "$($inspectCodeToolFolder)\Summary.md"
-$inspectCodeCacheFolder = "$($inspectCodeToolFolder)\cache"
+$cacheFolder = "$($inspectCodeToolFolder)\cache"
+$inspectCodeCacheFolder = "$($cacheFolder)\inspect"
+$dotnetToolsMManifestFile = "$($cacheFolder )\dotnet-tools\dotnet-tools.json"
 
 Write-Output "##[section]DotNet Install Tool JetBrains.ReSharper.GlobalTools"
-dotnet tool update -g JetBrains.ReSharper.GlobalTools
+dotnet tool install JetBrains.ReSharper.GlobalTools --create-manifest-if-needed --tool-manifest $dotnetToolsMManifestFile
 
 $include = "";
 if($onlyChangedFilesIfPullRequest -and $env:System_PullRequest_PullRequestId) {
@@ -31,7 +33,7 @@ if($onlyChangedFilesIfPullRequest -and $env:System_PullRequest_PullRequestId) {
 Write-Output "##[section]Run Inspect Code"
 New-Item -Path $inspectCodeToolFolder -ItemType Directory | Out-Null
 
-& jb inspectcode $inspectCodeTarget "--output=$($inspectCodeResultsPath)" "--properties:Configuration=Release" "--caches-home=$($inspectCodeCacheFolder)" "$($include)"
+& "$($dotnetToolsFolder)\jb" inspectcode $inspectCodeTarget "--output=$($inspectCodeResultsPath)" "--properties:Configuration=Release" "--caches-home=$($inspectCodeCacheFolder)" "$($include)"
 
 Write-Output "##[section]Analyse Results"
 $sarifContent = Get-Content -Path $inspectCodeResultsPath -Raw
