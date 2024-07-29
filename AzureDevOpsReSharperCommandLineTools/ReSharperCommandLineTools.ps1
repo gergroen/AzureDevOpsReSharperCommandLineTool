@@ -36,8 +36,10 @@ if($onlyChangedFilesIfPullRequest -and $env:System_PullRequest_PullRequestId) {
 }
 
 Write-Output "##[section]Run Inspect Code"
-New-Item -Path $inspectCodeToolFolder -ItemType Directory | Out-Null
-
+if(!(Test-Path $inspectCodeToolFolder))
+{
+    New-Item -Path $inspectCodeToolFolder -ItemType Directory | Out-Null
+}
 & "$($dotnetToolsFolder)\jb" inspectcode $inspectCodeTarget "--output=$($inspectCodeResultsPath)" "--properties:Configuration=Release" "--caches-home=$($inspectCodeCacheFolder)" "$($include)"
 
 Write-Output "##[section]Analyse Results"
