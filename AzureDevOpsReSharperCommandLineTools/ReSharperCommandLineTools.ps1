@@ -40,7 +40,7 @@ if(!(Test-Path $inspectCodeToolFolder))
 {
     New-Item -Path $inspectCodeToolFolder -ItemType Directory | Out-Null
 }
-& dotnet tool run inspectcode $inspectCodeTarget "--output=$($inspectCodeResultsPath)" "--properties:Configuration=Release" "--caches-home=$($inspectCodeCacheFolder)" "$($include)"
+& dotnet tool run jb inspectcode $inspectCodeTarget "--output=$($inspectCodeResultsPath)" "--properties:Configuration=Release" "--caches-home=$($inspectCodeCacheFolder)" "$($include)"
 
 Write-Output "##[section]Analyse Results"
 $sarifContent = Get-Content -Path $inspectCodeResultsPath -Raw
