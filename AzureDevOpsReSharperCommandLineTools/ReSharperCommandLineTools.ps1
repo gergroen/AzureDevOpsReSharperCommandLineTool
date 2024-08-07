@@ -15,23 +15,29 @@ if(!(Test-Path $dotnetToolsManifestFile))
 }
 dotnet tool update JetBrains.ReSharper.GlobalTools --tool-manifest $dotnetToolsManifestFile
 
-$include = "";
+$argumentList = @()
+$argumentList += "tool run jb inspectcode"
+$argumentList += $inspectCodeTarget
+$argumentList += "--output=$($inspectCodeResultsPath)"
+$argumentList += "--properties:Configuration=Release"
+$argumentList += "--caches-home=$($inspectCodeCacheFolder)"
 if($onlyChangedFilesIfPullRequest -and $env:System_PullRequest_PullRequestId) {
     Write-Output "##[section]Get list of changed files of pull request"
     # Azure DevOps REST API endpoint for pull request changes
     $baseUrl = "$($env:System_CollectionUri)$($env:System_TeamProject)/_apis/git/repositories/$($env:Build_Repository_ID)"
     $uri = "$($baseUrl)/pullRequests/$($env:System_PullRequest_PullRequestId)/iterations/1/changes?api-version=6.0"
     # Base64-encoded PAT
+    Write-Output "##[debug]Get:$uri"
     $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$($env:System_AccessToken)"))
     # Invoke the REST API
     $response = Invoke-RestMethod -Uri $uri -Method Get -Headers @{
         Authorization = ("Basic {0}" -f $base64AuthInfo)
     }
     # Output the changed files
-    $include = "--include="
     $response.changeEntries | ForEach-Object {
+        Write-Output "##[debug]ChangeEntry:$($_.item | ConvertTo-Json)"
         $changedFile = $_.item.path.TrimStart("/");
-        $include ="$($include)$($changedFile);"
+        $argumentList += "--include=$($changedFile)"
     }
 }
 
@@ -40,8 +46,8 @@ if(!(Test-Path $inspectCodeToolFolder))
 {
     New-Item -Path $inspectCodeToolFolder -ItemType Directory | Out-Null
 }
-Start-Process -FilePath "dotnet" -WorkingDirectory $dotnetToolsManifestFolder -ArgumentList "tool run jb inspectcode",$inspectCodeTarget,"--output=$($inspectCodeResultsPath)","--properties:Configuration=Release","--caches-home=$($inspectCodeCacheFolder)",$include -Wait -NoNewWindow
-#& dotnet tool run jb inspectcode $inspectCodeTarget "--output=$($inspectCodeResultsPath)" "--properties:Configuration=Release" "--caches-home=$($inspectCodeCacheFolder)" "$($include)"
+Write-Output "##[debug]dotnet argumentList:$($argumentList | ConvertTo-Json)"
+Start-Process -FilePath "dotnet" -WorkingDirectory $dotnetToolsManifestFolder -ArgumentList $argumentList -Wait -NoNewWindow
 
 Write-Output "##[section]Analyse Results"
 $sarifContent = Get-Content -Path $inspectCodeResultsPath -Raw
@@ -62,7 +68,6 @@ foreach ($run in $sarifObject.runs) {
         if ($result.level -eq "error") {
             $null = $filteredElementsFail.Add($result);
             $filteredElementsReportError++
-
         }
     }
 }
