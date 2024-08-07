@@ -23,11 +23,25 @@ $argumentList += "--properties:Configuration=Release"
 $argumentList += "--caches-home=$($inspectCodeCacheFolder)"
 if($onlyChangedFilesIfPullRequest -and $env:System_PullRequest_PullRequestId) {
     Write-Output "##[section]Get list of changed files of pull request"
-    # Azure DevOps REST API endpoint for pull request changes
+
+    # Azure DevOps REST API endpoint for pull request iterations
     $baseUrl = "$($env:System_CollectionUri)$($env:System_TeamProject)/_apis/git/repositories/$($env:Build_Repository_ID)"
-    $uri = "$($baseUrl)/pullRequests/$($env:System_PullRequest_PullRequestId)/iterations/1/changes?api-version=6.0"
+    $uri = "$($baseUrl)/pullRequests/$($env:System_PullRequest_PullRequestId)/iterations?api-version=6.0"
     # Base64-encoded PAT
-    Write-Output "##[debug]Get:$uri"
+    Write-Output "##[debug]GetIterations:$uri"
+    $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$($env:System_AccessToken)"))
+    # Invoke the REST API
+    $response = Invoke-RestMethod -Uri $uri -Method Get -Headers @{
+        Authorization = ("Basic {0}" -f $base64AuthInfo)
+    }
+    $iterations = $response.value
+    $highestIterationId = $iterations | Sort-Object -Property id -Descending | Select-Object -First 1 | Select-Object -ExpandProperty id
+    Write-Output "##[debug]HighestIterationId:$highestIterationId"
+
+    # Azure DevOps REST API endpoint for pull request changes
+    $uri = "$($baseUrl)/pullRequests/$($env:System_PullRequest_PullRequestId)/iterations/$highestIterationId/changes?api-version=6.0"
+    # Base64-encoded PAT
+    Write-Output "##[debug]GetIterationChanges:$uri"
     $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$($env:System_AccessToken)"))
     # Invoke the REST API
     $response = Invoke-RestMethod -Uri $uri -Method Get -Headers @{
@@ -49,6 +63,11 @@ if(!(Test-Path $inspectCodeToolFolder))
 Write-Output "##[debug]dotnet argumentList:$($argumentList | ConvertTo-Json)"
 Start-Process -FilePath "dotnet" -WorkingDirectory $dotnetToolsManifestFolder -ArgumentList $argumentList -Wait -NoNewWindow
 
+if(!(Test-Path $inspectCodeResultsPath))
+{
+    Write-Output ("##vso[task.complete result=SucceededWithIssues;]No report generated")
+    return
+}
 Write-Output "##[section]Analyse Results"
 $sarifContent = Get-Content -Path $inspectCodeResultsPath -Raw
 $sarifObject = $sarifContent | ConvertFrom-Json
