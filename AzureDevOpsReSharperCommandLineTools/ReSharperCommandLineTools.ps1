@@ -1,5 +1,11 @@
-[string]$inspectCodeTarget  = Get-VstsInput -Name Target
-[string]$onlyChangedFilesIfPullRequest  = Get-VstsInput -Name OnlyInspectChangedFilesIfPullRequest
+[string]$inspectCodeTarget  = Get-VstsInput -Name target
+[bool]$onlyChangedFilesIfPullRequest  = Get-VstsInput -Name onlyInspectChangedFilesIfPullRequest -AsBool
+[bool]$failOnMaximumErrors  = Get-VstsInput -Name failOnMaximumErrors -AsBool
+[bool]$failOnMaximumWarnings  = Get-VstsInput -Name failOnMaximumWarnings -AsBool
+[bool]$failOnMaximumNotes  = Get-VstsInput -Name failOnMaximumNotes -AsBool
+[int]$maximumExpectedErrors = Get-VstsInput -Name maximumExpectedErrors -AsInt
+[int]$maximumExpectedWarnings = Get-VstsInput -Name maximumExpectedWarnings -AsInt
+[int]$maximumExpectedNotes = Get-VstsInput -Name maximumExpectedNotes -AsInt
 $inspectCodeToolFolder = $([IO.Path]::GetFullPath("$($env:AGENT_TEMPDIRECTORY)\resharper_commandline_tools"))
 $inspectCodeResultsPath  = "$($inspectCodeToolFolder)\resharper_commandline_tools_inspectcode.sarif"
 $summaryFilePath  = "$($inspectCodeToolFolder)\Summary.md"
@@ -65,20 +71,20 @@ Start-Process -FilePath "dotnet" -WorkingDirectory $dotnetToolsManifestFolder -A
 
 if(!(Test-Path $inspectCodeResultsPath))
 {
-    Write-Output ("##vso[task.complete result=SucceededWithIssues;]No report generated")
+    Write-Output "##vso[task.complete result=SucceededWithIssues;]No report generated"
     return
 }
 Write-Output "##[section]Analyse Results"
 $sarifContent = Get-Content -Path $inspectCodeResultsPath -Raw
 $sarifObject = $sarifContent | ConvertFrom-Json
-$filteredElementsReportSuggestion = 0
+$filteredElementsReportNote = 0
 $filteredElementsReportWarning = 0
 $filteredElementsReportError = 0
 $filteredElementsFail = [System.Collections.ArrayList]::new()
 foreach ($run in $sarifObject.runs) {
     foreach ($result in $run.results) {
         if ($result.level -eq "note") {
-            $filteredElementsReportSuggestion++
+            $filteredElementsReportNote++
         }
         if ($result.level -eq "warning") {
             $null = $filteredElementsFail.Add($result);
@@ -103,7 +109,7 @@ foreach ($issue in $filteredElementsFail | Sort-Object level -Descending) {
 }
 
 $null = New-Item $summaryFilePath -type file -force
-$summaryMessage = "Code inspect found $($filteredElementsReportSuggestion) suggestions, $($filteredElementsReportWarning) warnings and $($filteredElementsReportError) errors"
+$summaryMessage = "Code inspect found $($filteredElementsReportNote) notes, $($filteredElementsReportWarning) warnings and $($filteredElementsReportError) errors"
 Write-Output $summaryMessage
 Add-Content $summaryFilePath ($summaryMessage) 
 
@@ -112,7 +118,16 @@ Write-Output "##vso[artifact.upload containerfolder=CodeAnalysisLogs;artifactnam
 Write-Output "##vso[task.addattachment type=Distributedtask.Core.Summary;name=Resharper Command Line Tools Inspect Code;]$summaryFilePath"
 
 $buildResult = "Succeeded"
-# if($filteredElementsFail.Count -gt 0) {
-#     $buildResult = "Failed"
-# }
+if($failOnMaximumNotes -and $filteredElementsReportNote -gt $maximumExpectedNotes) {
+    $summaryMessage = "Found $($filteredElementsReportNote) notes. Maximum is $($maximumExpectedNotes) notes"
+    $buildResult = "Failed"
+}
+if($failOnMaximumWarnings -and $filteredElementsReportWarning -gt $maximumExpectedWarnings) {
+    $summaryMessage = "Found $($filteredElementsReportWarning) warnings. Maximum is $($maximumExpectedWarnings) warnings"
+    $buildResult = "Failed"
+}
+if($failOnMaximumErrors -and $filteredElementsReportError -gt $maximumExpectedErrors) {
+    $summaryMessage = "Found $($filteredElementsReportError) errors. Maximum is $($maximumExpectedErrors) errors"
+    $buildResult = "Failed"
+}
 Write-Output ("##vso[task.complete result={0};]{1}" -f $buildResult, $summaryMessage)

@@ -14,13 +14,13 @@
   "version": {
     "Major": "0",
     "Minor": "1",
-    "Patch": "26"
+    "Patch": "28"
   },
   "minimumAgentVersion": "1.95.0",
   "instanceNameFormat": "ReSharperCommandLineTools $(message)",
   "inputs": [
     {
-      "name": "Target",
+      "name": "target",
       "type": "String",
       "label": "Target variable",
       "defaultValue": "TargetSolution.sln",
@@ -28,12 +28,60 @@
       "helpMarkDown": "The target of the action"
     },
     {
-      "name": "OnlyInspectChangedFilesIfPullRequest",
+      "name": "onlyInspectChangedFilesIfPullRequest",
       "type": "Boolean",
       "label": "Only inspect changed files if pull request",
       "defaultValue": false,
       "required": true,
       "helpMarkDown": "Only inspect changed files if pull request"
+    },
+    {
+      "name": "failOnMaximumErrors",
+      "type": "Boolean",
+      "label": "Fail when maximum errors is over secede",
+      "defaultValue": false,
+      "required": true,
+      "helpMarkDown": "Fail when maximum errors is over secede"
+    },
+    {
+      "name": "maximumExpectedErrors",
+      "type": "Number",
+      "label": "Maximum # errors",
+      "defaultValue": 0,
+      "required": true,
+      "helpMarkDown": "Maximum # errors"
+    },
+    {
+      "name": "failOnMaximumWarnings",
+      "type": "Boolean",
+      "label": "Fail when maximum warnings is over secede",
+      "defaultValue": false,
+      "required": true,
+      "helpMarkDown": "Fail when maximum warnings is over secede"
+    },
+    {
+      "name": "maximumExpectedWarnings",
+      "type": "Number",
+      "label": "Maximum # warnings",
+      "defaultValue": 0,
+      "required": true,
+      "helpMarkDown": "Maximum # warnings"
+    },
+    {
+      "name": "failOnMaximumNotes",
+      "type": "Boolean",
+      "label": "Fail when maximum warnings is over secede",
+      "defaultValue": false,
+      "required": true,
+      "helpMarkDown": "Fail when maximum warnings is over secede"
+    },
+    {
+      "name": "maximumExpectedNotes",
+      "type": "Number",
+      "label": "Maximum # notes",
+      "defaultValue": 0,
+      "required": true,
+      "helpMarkDown": "Maximum # notes"
     }
   ],
   "execution": {
