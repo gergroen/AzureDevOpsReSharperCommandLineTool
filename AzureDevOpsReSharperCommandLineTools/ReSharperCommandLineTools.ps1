@@ -6,6 +6,7 @@
 [int]$maximumExpectedErrors = Get-VstsInput -Name maximumExpectedErrors -AsInt
 [int]$maximumExpectedWarnings = Get-VstsInput -Name maximumExpectedWarnings -AsInt
 [int]$maximumExpectedNotes = Get-VstsInput -Name maximumExpectedNotes -AsInt
+[string]$reportPathPrefix  = Get-VstsInput -Name reportPathPrefix
 $inspectCodeToolFolder = $([IO.Path]::GetFullPath("$($env:AGENT_TEMPDIRECTORY)\resharper_commandline_tools"))
 $inspectCodeResultsPath  = "$($inspectCodeToolFolder)\resharper_commandline_tools_inspectcode.sarif"
 $summaryFilePath  = "$($inspectCodeToolFolder)\Summary.md"
@@ -74,6 +75,27 @@ if(!(Test-Path $inspectCodeResultsPath))
     Write-Output "##vso[task.complete result=SucceededWithIssues;]No report generated"
     return
 }
+
+if($reportPathPrefix.Length -gt 0)
+{
+    Write-Output "##[section]Add path prefix in report"
+    $sarifContent = Get-Content -Path $inspectCodeResultsPath -Raw
+    $sarifObject = $sarifContent | ConvertFrom-Json
+    foreach ($run in $sarifObject.runs) {
+        foreach ($result in $run.results) {
+            foreach ($location in $result.locations) {
+                $locatino.physicalLocation.artifactLocation.uri = $reportPathPrefix + $locatino.physicalLocation.artifactLocation.uri
+            }
+        }
+        foreach ($artifact in $run.artifacts) {
+            $artifact.location.uri = $reportPathPrefix + $artifact.location.uri
+        }
+    }
+    $modifiedSarifContent = $sarifObject | ConvertTo-Json -Depth 100
+    Set-Content -Path $inspectCodeResultsPath -Value $modifiedSarifContent
+}
+
+
 Write-Output "##[section]Analyse Results"
 $sarifContent = Get-Content -Path $inspectCodeResultsPath -Raw
 $sarifObject = $sarifContent | ConvertFrom-Json
